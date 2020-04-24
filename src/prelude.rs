@@ -50,3 +50,21 @@ pub trait QueryBuilderWithSet {
   fn set<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T);
   fn set_computed(&mut self, field: &str, value: &str);
 }
+
+pub enum Order {
+  Asc(String),
+  Desc(String),
+}
+
+impl Order {
+  pub fn to_string(&self) -> String {
+    match self {
+      Order::Asc(column) => format!("{} ASC", column),
+      Order::Desc(column) => format!("{} DESC", column),
+    }
+  }
+}
+
+pub trait QueryBuilderWithOrder {
+  fn order_by(&mut self, field: Order);
+}
