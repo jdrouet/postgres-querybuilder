@@ -7,6 +7,7 @@ pub struct SelectBuilder {
   where_cols: Vec<String>,
   joins: Vec<Join>,
   groups: Vec<String>,
+  order: Vec<Order>,
   limit: Option<String>,
   offset: Option<String>,
   params: Vec<Box<dyn ToSql + Sync>>,
@@ -29,6 +30,7 @@ impl SelectBuilder {
       where_cols: vec![],
       joins: vec![],
       groups: vec![],
+      order: vec![],
       limit: None,
       offset: None,
       params: vec![],
@@ -108,6 +110,10 @@ impl QueryBuilder for SelectBuilder {
     }
     if self.groups.len() > 0 {
       result = format!("{} GROUP BY {}", result, self.groups.join(", "));
+    }
+    if self.order.len() > 0 {
+      let order: Vec<String> = self.order.iter().map(|order| order.to_string()).collect();
+      result = format!("{} ORDER BY {}", result, order.join(", "));
     }
     if let Some(limit) = self.limit.as_ref() {
       result = format!("{} LIMIT {}", result, limit);
@@ -192,6 +198,27 @@ impl QueryBuilderWithGroupBy for SelectBuilder {
   }
 }
 
+impl QueryBuilderWithOrder for SelectBuilder {
+  /// Add order attribute to request
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use postgres_querybuilder::SelectBuilder;
+  /// use postgres_querybuilder::prelude::Order;
+  /// use postgres_querybuilder::prelude::QueryBuilder;
+  /// use postgres_querybuilder::prelude::QueryBuilderWithOrder;
+  ///
+  /// let mut builder = SelectBuilder::new("users");
+  /// builder.order_by(Order::Asc("name".into()));
+  ///
+  /// assert_eq!(builder.get_query(), "SELECT * FROM users ORDER BY name ASC");
+  /// ```
+  fn order_by(&mut self, field: Order) {
+    self.order.push(field);
+  }
+}
+
 #[cfg(test)]
 pub mod test {
   use super::*;
@@ -241,6 +268,18 @@ pub mod test {
     assert_eq!(
       builder.get_query(),
       "SELECT id, name FROM publishers WHERE trololo = $1 AND tralala = $2 AND trululu <> $3"
+    );
+  }
+
+  #[test]
+  fn with_order() {
+    let mut builder = SelectBuilder::new("publishers");
+    builder.select("id");
+    builder.order_by(Order::Asc("id".into()));
+    builder.order_by(Order::Desc("name".into()));
+    assert_eq!(
+      builder.get_query(),
+      "SELECT id FROM publishers ORDER BY id ASC, name DESC"
     );
   }
 }

@@ -27,6 +27,7 @@ let user = rows.first().map(User::from);
   - [x] group by
   - [x] limit
   - [x] offset
+  - [x] order by
 - [ ] Update query
   - [x] set value
   - [x] where equal
