@@ -13,3 +13,7 @@ repository = "https://github.com/jdrouet/postgres-querybuilder/"
 
 [dependencies]
 postgres-types = "0.1"
+
+[dev-dependencies]
+postgres = "0.17"
+serial_test = "0.4"

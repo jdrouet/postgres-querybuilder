@@ -37,7 +37,7 @@ pub trait QueryBuilderWithLimit {
 }
 
 pub trait QueryBuilderWithOffset {
-  fn offset(&mut self, offset: u32);
+  fn offset(&mut self, offset: i64);
 }
 
 pub trait QueryBuilderWithJoin {
