@@ -165,7 +165,7 @@ impl QueryBuilderWithLimit for SelectBuilder {
 }
 
 impl QueryBuilderWithOffset for SelectBuilder {
-  fn offset(&mut self, offset: u32) {
+  fn offset(&mut self, offset: i64) {
     self.offset = Some(format!("${}", self.next_index()));
     self.params.push(Box::new(offset));
   }
