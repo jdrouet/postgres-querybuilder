@@ -7,6 +7,7 @@
 #[macro_use]
 extern crate serial_test;
 
+pub mod bucket;
 pub mod prelude;
 mod select_builder;
 mod update_builder;

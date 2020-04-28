@@ -1,3 +1,4 @@
+use crate::bucket::Bucket;
 use crate::prelude::*;
 use postgres_types::ToSql;
 
@@ -5,7 +6,7 @@ pub struct UpdateBuilder {
   table: String,
   fields: Vec<String>,
   where_cols: Vec<String>,
-  params: Vec<Box<dyn ToSql + Sync>>,
+  params: Bucket,
 }
 
 impl UpdateBuilder {
@@ -29,7 +30,7 @@ impl UpdateBuilder {
       table: from.into(),
       fields: vec![],
       where_cols: vec![],
-      params: vec![],
+      params: Bucket::new(),
     }
   }
 }
@@ -57,36 +58,26 @@ impl QueryBuilder for UpdateBuilder {
   }
 
   fn get_ref_params(self) -> Vec<&'static (dyn ToSql + Sync)> {
-    let mut args: Vec<&(dyn ToSql + Sync)> = vec![];
-    for item in self.params {
-      args.push(Box::leak(item));
-    }
-    args
+    self.params.get_refs()
   }
 }
 
 impl QueryBuilderWithWhere for UpdateBuilder {
   fn where_eq<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    self
-      .where_cols
-      .push(format!("{} = ${}", field, self.next_index()));
-    self.params.push(Box::new(value.clone()));
+    let index = self.params.push(value);
+    self.where_cols.push(format!("{} = ${}", field, index));
   }
 
   fn where_ne<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    self
-      .where_cols
-      .push(format!("{} <> ${}", field, self.next_index()));
-    self.params.push(Box::new(value.clone()));
+    let index = self.params.push(value);
+    self.where_cols.push(format!("{} <> ${}", field, index));
   }
 }
 
 impl QueryBuilderWithSet for UpdateBuilder {
   fn set<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    self
-      .fields
-      .push(format!("{} = ${}", field, self.next_index()));
-    self.params.push(Box::new(value.clone()));
+    let index = self.params.push(value);
+    self.fields.push(format!("{} = ${}", field, index));
   }
 
   fn set_computed(&mut self, field: &str, value: &str) {
@@ -109,7 +100,10 @@ pub mod test {
     let mut builder = UpdateBuilder::new("publishers");
     builder.where_eq("trololo", 42);
     builder.set("id", 5);
-    assert_eq!(builder.get_query(), "UPDATE publishers SET id = $2 WHERE trololo = $1");
+    assert_eq!(
+      builder.get_query(),
+      "UPDATE publishers SET id = $2 WHERE trololo = $1"
+    );
   }
 
   #[test]
@@ -118,6 +112,9 @@ pub mod test {
     builder.where_eq("trololo", 42);
     builder.set("id", 5);
     builder.set_computed("trololo", "md5(42)");
-    assert_eq!(builder.get_query(), "UPDATE publishers SET id = $2, trololo = md5(42) WHERE trololo = $1");
+    assert_eq!(
+      builder.get_query(),
+      "UPDATE publishers SET id = $2, trololo = md5(42) WHERE trololo = $1"
+    );
   }
 }
