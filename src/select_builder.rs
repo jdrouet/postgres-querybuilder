@@ -1,3 +1,4 @@
+use crate::bucket::Bucket;
 use crate::prelude::*;
 use postgres_types::ToSql;
 
@@ -10,7 +11,7 @@ pub struct SelectBuilder {
   order: Vec<Order>,
   limit: Option<String>,
   offset: Option<String>,
-  params: Vec<Box<dyn ToSql + Sync>>,
+  params: Bucket,
 }
 
 impl SelectBuilder {
@@ -33,7 +34,7 @@ impl SelectBuilder {
       order: vec![],
       limit: None,
       offset: None,
-      params: vec![],
+      params: Bucket::new(),
     }
   }
 
@@ -88,8 +89,7 @@ impl SelectBuilder {
   /// assert_eq!(builder.get_query(), "SELECT * FROM users WHERE password = MD5($1)");
   /// ```
   pub fn add_param(&mut self, raw: String) -> usize {
-    self.params.push(Box::new(raw));
-    self.params.len()
+    self.params.push(raw)
   }
 }
 
@@ -124,50 +124,34 @@ impl QueryBuilder for SelectBuilder {
     result
   }
 
-  fn has_params(&self) -> bool {
-    self.params.len() > 0
-  }
-
-  fn next_index(&self) -> usize {
-    self.params.len() + 1
-  }
-
   fn get_ref_params(self) -> Vec<&'static (dyn ToSql + Sync)> {
-    let mut args: Vec<&(dyn ToSql + Sync)> = vec![];
-    for item in self.params {
-      args.push(Box::leak(item));
-    }
-    args
+    self.params.get_refs()
   }
 }
 
 impl QueryBuilderWithWhere for SelectBuilder {
   fn where_eq<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    self
-      .where_cols
-      .push(format!("{} = ${}", field, self.next_index()));
-    self.params.push(Box::new(value.clone()));
+    let index = self.params.push(value);
+    self.where_cols.push(format!("{} = ${}", field, index));
   }
 
   fn where_ne<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    self
-      .where_cols
-      .push(format!("{} <> ${}", field, self.next_index()));
-    self.params.push(Box::new(value.clone()));
+    let index = self.params.push(value);
+    self.where_cols.push(format!("{} <> ${}", field, index));
   }
 }
 
 impl QueryBuilderWithLimit for SelectBuilder {
   fn limit(&mut self, limit: i64) {
-    self.limit = Some(format!("${}", self.next_index()));
-    self.params.push(Box::new(limit));
+    let index = self.params.push(limit);
+    self.limit = Some(format!("${}", index));
   }
 }
 
 impl QueryBuilderWithOffset for SelectBuilder {
   fn offset(&mut self, offset: i64) {
-    self.offset = Some(format!("${}", self.next_index()));
-    self.params.push(Box::new(offset));
+    let index = self.params.push(offset);
+    self.offset = Some(format!("${}", index));
   }
 }
 
