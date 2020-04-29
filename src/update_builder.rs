@@ -5,7 +5,7 @@ use postgres_types::ToSql;
 pub struct UpdateBuilder {
   table: String,
   fields: Vec<String>,
-  where_cols: Vec<String>,
+  conditions: Vec<String>,
   params: Bucket,
 }
 
@@ -29,7 +29,7 @@ impl UpdateBuilder {
     UpdateBuilder {
       table: from.into(),
       fields: vec![],
-      where_cols: vec![],
+      conditions: vec![],
       params: Bucket::new(),
     }
   }
@@ -50,8 +50,8 @@ impl UpdateBuilder {
   }
 
   fn where_to_query(&self) -> Option<String> {
-    if self.where_cols.len() > 0 {
-      let where_query = self.where_cols.join(" AND ");
+    if self.conditions.len() > 0 {
+      let where_query = self.conditions.join(" AND ");
       Some(format!("WHERE {}", where_query))
     } else {
       None
@@ -85,7 +85,7 @@ impl QueryBuilder for UpdateBuilder {
 
 impl QueryBuilderWithWhere for UpdateBuilder {
   fn where_condition(&mut self, raw: &str) {
-    self.where_cols.push(raw.to_string());
+    self.conditions.push(raw.to_string());
   }
 }
 

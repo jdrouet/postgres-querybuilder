@@ -5,7 +5,7 @@ use postgres_types::ToSql;
 pub struct SelectBuilder {
   columns: Vec<String>,
   from_table: String,
-  where_cols: Vec<String>,
+  conditions: Vec<String>,
   joins: Vec<Join>,
   groups: Vec<String>,
   order: Vec<Order>,
@@ -28,7 +28,7 @@ impl SelectBuilder {
     SelectBuilder {
       columns: vec![],
       from_table: from.into(),
-      where_cols: vec![],
+      conditions: vec![],
       joins: vec![],
       groups: vec![],
       order: vec![],
@@ -70,7 +70,7 @@ impl SelectBuilder {
   /// assert_eq!(builder.get_query(), "SELECT * FROM users WHERE something IS NULL");
   /// ```
   pub fn add_where_raw(&mut self, raw: String) {
-    self.where_cols.push(raw);
+    self.conditions.push(raw);
   }
 }
 
@@ -89,8 +89,8 @@ impl SelectBuilder {
   }
 
   fn where_to_query(&self) -> Option<String> {
-    if self.where_cols.len() > 0 {
-      let result = self.where_cols.join(" AND ");
+    if self.conditions.len() > 0 {
+      let result = self.conditions.join(" AND ");
       Some(format!("WHERE {}", result))
     } else {
       None
@@ -169,7 +169,7 @@ impl QueryBuilder for SelectBuilder {
 
 impl QueryBuilderWithWhere for SelectBuilder {
   fn where_condition(&mut self, raw: &str) {
-    self.where_cols.push(raw.to_string());
+    self.conditions.push(raw.to_string());
   }
 }
 
