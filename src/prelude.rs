@@ -17,8 +17,6 @@ impl Join {
 }
 
 pub trait QueryBuilder {
-  fn has_params(&self) -> bool;
-  fn next_index(&self) -> usize;
   fn get_query(&self) -> String;
   fn get_ref_params(self) -> Vec<&'static (dyn ToSql + Sync)>;
 }

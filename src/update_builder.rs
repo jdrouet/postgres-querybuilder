@@ -49,14 +49,6 @@ impl QueryBuilder for UpdateBuilder {
     result
   }
 
-  fn has_params(&self) -> bool {
-    self.params.len() > 0
-  }
-
-  fn next_index(&self) -> usize {
-    self.params.len() + 1
-  }
-
   fn get_ref_params(self) -> Vec<&'static (dyn ToSql + Sync)> {
     self.params.get_refs()
   }
