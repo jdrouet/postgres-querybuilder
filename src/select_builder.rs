@@ -93,35 +93,88 @@ impl SelectBuilder {
   }
 }
 
-impl QueryBuilder for SelectBuilder {
-  fn get_query(&self) -> String {
+impl SelectBuilder {
+  fn select_to_query(&self) -> String {
     let columns = if self.select_cols.len() == 0 {
       "*".to_string()
     } else {
       self.select_cols.join(", ")
     };
-    let mut result = format!("SELECT {} FROM {}", columns, self.from_table);
-    for join in self.joins.iter() {
-      result = format!("{} {}", result, join.to_string());
-    }
+    format!("SELECT {}", columns)
+  }
+
+  fn from_to_query(&self) -> String {
+    format!("FROM {}", self.from_table)
+  }
+
+  fn where_to_query(&self) -> Option<String> {
     if self.where_cols.len() > 0 {
-      let where_query = self.where_cols.join(" AND ");
-      result = format!("{} WHERE {}", result, where_query);
+      let result = self.where_cols.join(" AND ");
+      Some(format!("WHERE {}", result))
+    } else {
+      None
     }
+  }
+
+  fn group_by_to_query(&self) -> Option<String> {
     if self.groups.len() > 0 {
-      result = format!("{} GROUP BY {}", result, self.groups.join(", "));
+      let result = self.groups.join(", ");
+      Some(format!("GROUP BY {}", result))
+    } else {
+      None
     }
+  }
+
+  fn order_by_to_query(&self) -> Option<String> {
     if self.order.len() > 0 {
-      let order: Vec<String> = self.order.iter().map(|order| order.to_string()).collect();
-      result = format!("{} ORDER BY {}", result, order.join(", "));
+      let result: Vec<String> = self.order.iter().map(|order| order.to_string()).collect();
+      Some(format!("ORDER BY {}", result.join(", ")))
+    } else {
+      None
     }
-    if let Some(limit) = self.limit.as_ref() {
-      result = format!("{} LIMIT {}", result, limit);
+  }
+
+  fn limit_to_query(&self) -> Option<String> {
+    match self.limit.as_ref() {
+      Some(limit) => Some(format!("LIMIT {}", limit)),
+      None => None,
     }
-    if let Some(offset) = self.offset.as_ref() {
-      result = format!("{} OFFSET {}", result, offset);
+  }
+
+  fn offset_to_query(&self) -> Option<String> {
+    match self.offset.as_ref() {
+      Some(offset) => Some(format!("OFFSET {}", offset)),
+      None => None,
     }
-    result
+  }
+}
+
+impl QueryBuilder for SelectBuilder {
+  fn get_query(&self) -> String {
+    let mut sections: Vec<String> = vec![];
+    sections.push(self.select_to_query());
+    sections.push(self.from_to_query());
+    match self.where_to_query() {
+      Some(value) => sections.push(value),
+      None => (),
+    };
+    match self.group_by_to_query() {
+      Some(value) => sections.push(value),
+      None => (),
+    };
+    match self.order_by_to_query() {
+      Some(value) => sections.push(value),
+      None => (),
+    };
+    match self.limit_to_query() {
+      Some(value) => sections.push(value),
+      None => (),
+    };
+    match self.offset_to_query() {
+      Some(value) => sections.push(value),
+      None => (),
+    };
+    sections.join(" ")
   }
 
   fn get_ref_params(self) -> Vec<&'static (dyn ToSql + Sync)> {

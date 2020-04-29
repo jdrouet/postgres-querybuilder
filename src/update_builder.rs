@@ -35,18 +35,43 @@ impl UpdateBuilder {
   }
 }
 
-impl QueryBuilder for UpdateBuilder {
-  fn get_query(&self) -> String {
-    let mut result = format!("UPDATE {}", self.table);
+impl UpdateBuilder {
+  fn from_to_query(&self) -> String {
+    format!("UPDATE {}", self.table)
+  }
+
+  fn set_to_query(&self) -> Option<String> {
     if self.fields.len() > 0 {
       let fields_query = self.fields.join(", ");
-      result = format!("{} SET {}", result, fields_query);
+      Some(format!("SET {}", fields_query))
+    } else {
+      None
     }
+  }
+
+  fn where_to_query(&self) -> Option<String> {
     if self.where_cols.len() > 0 {
       let where_query = self.where_cols.join(" AND ");
-      result = format!("{} WHERE {}", result, where_query);
+      Some(format!("WHERE {}", where_query))
+    } else {
+      None
     }
-    result
+  }
+}
+
+impl QueryBuilder for UpdateBuilder {
+  fn get_query(&self) -> String {
+    let mut result: Vec<String> = vec![];
+    result.push(self.from_to_query());
+    match self.set_to_query() {
+      Some(value) => result.push(value),
+      None => (),
+    };
+    match self.where_to_query() {
+      Some(value) => result.push(value),
+      None => (),
+    };
+    result.join(" ")
   }
 
   fn get_ref_params(self) -> Vec<&'static (dyn ToSql + Sync)> {
