@@ -3,6 +3,7 @@ use crate::prelude::*;
 use postgres_types::ToSql;
 
 pub struct SelectBuilder {
+  with_queries: Vec<(String, String)>,
   columns: Vec<String>,
   from_table: String,
   conditions: Vec<String>,
@@ -26,6 +27,7 @@ impl SelectBuilder {
   /// ```
   pub fn new(from: &str) -> Self {
     SelectBuilder {
+      with_queries: vec![],
       columns: vec![],
       from_table: from.into(),
       conditions: vec![],
@@ -75,6 +77,19 @@ impl SelectBuilder {
 }
 
 impl SelectBuilder {
+  fn with_queries_to_query(&self) -> Option<String> {
+    if self.with_queries.len() > 0 {
+      let result: Vec<String> = self
+        .with_queries
+        .iter()
+        .map(|item| format!("{} AS ({})", item.0, item.1))
+        .collect();
+      Some(format!("WITH {}", result.join(", ")))
+    } else {
+      None
+    }
+  }
+
   fn select_to_query(&self) -> String {
     let columns = if self.columns.len() == 0 {
       "*".to_string()
@@ -137,6 +152,10 @@ impl QueryBuilder for SelectBuilder {
 
   fn get_query(&self) -> String {
     let mut sections: Vec<String> = vec![];
+    match self.with_queries_to_query() {
+      Some(value) => sections.push(value),
+      None => (),
+    };
     sections.push(self.select_to_query());
     sections.push(self.from_to_query());
     match self.where_to_query() {
@@ -235,6 +254,12 @@ impl QueryBuilderWithOrder for SelectBuilder {
   }
 }
 
+impl QueryBuilderWithQueries for SelectBuilder {
+  fn with_query(&mut self, name: &str, query: &str) {
+    self.with_queries.push((name.into(), query.into()));
+  }
+}
+
 #[cfg(test)]
 pub mod test {
   use super::*;
@@ -296,6 +321,23 @@ pub mod test {
     assert_eq!(
       builder.get_query(),
       "SELECT id FROM publishers ORDER BY id ASC, name DESC"
+    );
+  }
+
+  #[test]
+  fn with_subquery() {
+    let mut builder = SelectBuilder::new("publishers_view");
+    builder.with_query(
+      "publishers_count",
+      "SELECT publisher_id, count(*) FROM articles GROUP BY publisher_id",
+    );
+    builder.with_query(
+      "publishers_subquery",
+      "SELECT * FROM publishers",
+    );
+    assert_eq!(
+      builder.get_query(),
+      "WITH publishers_count AS (SELECT publisher_id, count(*) FROM articles GROUP BY publisher_id), publishers_subquery AS (SELECT * FROM publishers) SELECT * FROM publishers_view"
     );
   }
 }

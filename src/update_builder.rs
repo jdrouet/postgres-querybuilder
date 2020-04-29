@@ -3,6 +3,7 @@ use crate::prelude::*;
 use postgres_types::ToSql;
 
 pub struct UpdateBuilder {
+  with_queries: Vec<(String, String)>,
   table: String,
   fields: Vec<String>,
   conditions: Vec<String>,
@@ -27,6 +28,7 @@ impl UpdateBuilder {
   /// ```
   pub fn new(from: &str) -> Self {
     UpdateBuilder {
+      with_queries: vec![],
       table: from.into(),
       fields: vec![],
       conditions: vec![],
@@ -36,6 +38,19 @@ impl UpdateBuilder {
 }
 
 impl UpdateBuilder {
+  fn with_queries_to_query(&self) -> Option<String> {
+    if self.with_queries.len() > 0 {
+      let result: Vec<String> = self
+        .with_queries
+        .iter()
+        .map(|item| format!("{} AS ({})", item.0, item.1))
+        .collect();
+      Some(format!("WITH {}", result.join(", ")))
+    } else {
+      None
+    }
+  }
+
   fn from_to_query(&self) -> String {
     format!("UPDATE {}", self.table)
   }
@@ -66,6 +81,10 @@ impl QueryBuilder for UpdateBuilder {
 
   fn get_query(&self) -> String {
     let mut result: Vec<String> = vec![];
+    match self.with_queries_to_query() {
+      Some(value) => result.push(value),
+      None => (),
+    };
     result.push(self.from_to_query());
     match self.set_to_query() {
       Some(value) => result.push(value),
@@ -97,6 +116,12 @@ impl QueryBuilderWithSet for UpdateBuilder {
 
   fn set_computed(&mut self, field: &str, value: &str) {
     self.fields.push(format!("{} = {}", field, value));
+  }
+}
+
+impl QueryBuilderWithQueries for UpdateBuilder {
+  fn with_query(&mut self, name: &str, query: &str) {
+    self.with_queries.push((name.into(), query.into()));
   }
 }
 
