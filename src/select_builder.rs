@@ -72,25 +72,6 @@ impl SelectBuilder {
   pub fn add_where_raw(&mut self, raw: String) {
     self.where_cols.push(raw);
   }
-
-  /// Add a parameter to the list of parameters. This is mostly used internally.
-  ///
-  /// # Examples
-  ///
-  /// ```
-  /// use postgres_querybuilder::SelectBuilder;
-  /// use postgres_querybuilder::prelude::QueryBuilder;
-  ///
-  /// let user_password = "password".to_string();
-  /// let mut builder = SelectBuilder::new("users");
-  /// let index = builder.add_param(user_password);
-  /// builder.add_where_raw(format!("password = MD5(${})", index));
-  ///
-  /// assert_eq!(builder.get_query(), "SELECT * FROM users WHERE password = MD5($1)");
-  /// ```
-  pub fn add_param(&mut self, raw: String) -> usize {
-    self.params.push(raw)
-  }
 }
 
 impl SelectBuilder {
@@ -150,6 +131,10 @@ impl SelectBuilder {
 }
 
 impl QueryBuilder for SelectBuilder {
+  fn add_param<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> usize {
+    self.params.push(value)
+  }
+
   fn get_query(&self) -> String {
     let mut sections: Vec<String> = vec![];
     sections.push(self.select_to_query());
@@ -183,14 +168,8 @@ impl QueryBuilder for SelectBuilder {
 }
 
 impl QueryBuilderWithWhere for SelectBuilder {
-  fn where_eq<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    let index = self.params.push(value);
-    self.where_cols.push(format!("{} = ${}", field, index));
-  }
-
-  fn where_ne<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    let index = self.params.push(value);
-    self.where_cols.push(format!("{} <> ${}", field, index));
+  fn where_condition(&mut self, raw: &str) {
+    self.where_cols.push(raw.to_string());
   }
 }
 

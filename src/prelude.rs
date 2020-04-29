@@ -17,13 +17,73 @@ impl Join {
 }
 
 pub trait QueryBuilder {
+  fn add_param<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> usize;
   fn get_query(&self) -> String;
   fn get_ref_params(self) -> Vec<&'static (dyn ToSql + Sync)>;
 }
 
-pub trait QueryBuilderWithWhere {
-  fn where_eq<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T);
-  fn where_ne<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T);
+pub trait QueryBuilderWithWhere: QueryBuilder {
+  /// Add where condition to query
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use postgres_querybuilder::SelectBuilder;
+  /// use postgres_querybuilder::prelude::QueryBuilder;
+  /// use postgres_querybuilder::prelude::QueryBuilderWithWhere;
+  ///
+  /// let user_password = "password".to_string();
+  /// let mut builder = SelectBuilder::new("users");
+  /// let first = builder.add_param(18);
+  /// let second = builder.add_param(28);
+  /// let condition = format!("age = ${} OR age = ${}", first, second);
+  /// builder.where_condition(condition.as_str());
+  ///
+  /// assert_eq!(builder.get_query(), "SELECT * FROM users WHERE age = $1 OR age = $2");
+  /// ```
+  fn where_condition(&mut self, raw: &str);
+
+  /// Add where equal condition to query
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use postgres_querybuilder::SelectBuilder;
+  /// use postgres_querybuilder::prelude::QueryBuilder;
+  /// use postgres_querybuilder::prelude::QueryBuilderWithWhere;
+  ///
+  /// let user_password = "password".to_string();
+  /// let mut builder = SelectBuilder::new("users");
+  /// builder.where_eq("id", 42);
+  ///
+  /// assert_eq!(builder.get_query(), "SELECT * FROM users WHERE id = $1");
+  /// ```
+  fn where_eq<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
+    let index = self.add_param(value);
+    let condition = format!("{} = ${}", field, index);
+    self.where_condition(condition.as_str());
+  }
+
+  /// Add where not equal condition to query
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use postgres_querybuilder::SelectBuilder;
+  /// use postgres_querybuilder::prelude::QueryBuilder;
+  /// use postgres_querybuilder::prelude::QueryBuilderWithWhere;
+  ///
+  /// let user_password = "password".to_string();
+  /// let mut builder = SelectBuilder::new("users");
+  /// builder.where_ne("id", 42);
+  ///
+  /// assert_eq!(builder.get_query(), "SELECT * FROM users WHERE id <> $1");
+  /// ```
+  fn where_ne<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
+    let index = self.add_param(value);
+    let condition = format!("{} <> ${}", field, index);
+    self.where_condition(condition.as_str());
+  }
 }
 
 pub trait QueryBuilderWithGroupBy {

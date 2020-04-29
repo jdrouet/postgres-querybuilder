@@ -60,6 +60,10 @@ impl UpdateBuilder {
 }
 
 impl QueryBuilder for UpdateBuilder {
+  fn add_param<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> usize {
+    self.params.push(value)
+  }
+
   fn get_query(&self) -> String {
     let mut result: Vec<String> = vec![];
     result.push(self.from_to_query());
@@ -80,14 +84,8 @@ impl QueryBuilder for UpdateBuilder {
 }
 
 impl QueryBuilderWithWhere for UpdateBuilder {
-  fn where_eq<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    let index = self.params.push(value);
-    self.where_cols.push(format!("{} = ${}", field, index));
-  }
-
-  fn where_ne<T: 'static + ToSql + Sync + Clone>(&mut self, field: &str, value: T) {
-    let index = self.params.push(value);
-    self.where_cols.push(format!("{} <> ${}", field, index));
+  fn where_condition(&mut self, raw: &str) {
+    self.where_cols.push(raw.to_string());
   }
 }
 
