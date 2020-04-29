@@ -28,13 +28,14 @@ let user = rows.first().map(User::from);
   - [x] limit
   - [x] offset
   - [x] order by
+  - [x] `WITH` query
 - [ ] Update query
   - [x] set value
   - [x] where equal
   - [x] where not equal
   - [ ] or where condition
   - [ ] returning
+  - [x] `WITH` query
 - [ ] Insert query
 - [ ] Delete query
-- [ ] `WITH` query
 - [ ] from subrequest

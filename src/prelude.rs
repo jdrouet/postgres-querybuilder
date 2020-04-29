@@ -126,3 +126,7 @@ impl Order {
 pub trait QueryBuilderWithOrder {
   fn order_by(&mut self, field: Order);
 }
+
+pub trait QueryBuilderWithQueries {
+  fn with_query(&mut self, name: &str, query: &str);
+}
