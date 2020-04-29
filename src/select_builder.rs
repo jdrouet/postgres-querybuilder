@@ -3,7 +3,7 @@ use crate::prelude::*;
 use postgres_types::ToSql;
 
 pub struct SelectBuilder {
-  select_cols: Vec<String>,
+  columns: Vec<String>,
   from_table: String,
   where_cols: Vec<String>,
   joins: Vec<Join>,
@@ -26,7 +26,7 @@ impl SelectBuilder {
   /// ```
   pub fn new(from: &str) -> Self {
     SelectBuilder {
-      select_cols: vec![],
+      columns: vec![],
       from_table: from.into(),
       where_cols: vec![],
       joins: vec![],
@@ -53,7 +53,7 @@ impl SelectBuilder {
   /// assert_eq!(builder.get_query(), "SELECT id, email FROM users");
   /// ```
   pub fn select(&mut self, column: &str) {
-    self.select_cols.push(column.to_string());
+    self.columns.push(column.to_string());
   }
 
   /// Add a raw where condition
@@ -76,10 +76,10 @@ impl SelectBuilder {
 
 impl SelectBuilder {
   fn select_to_query(&self) -> String {
-    let columns = if self.select_cols.len() == 0 {
+    let columns = if self.columns.len() == 0 {
       "*".to_string()
     } else {
-      self.select_cols.join(", ")
+      self.columns.join(", ")
     };
     format!("SELECT {}", columns)
   }
